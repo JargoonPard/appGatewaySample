@@ -49,4 +49,12 @@ func main() {
 		fmt.Println(yesno)
 		fmt.Println(*yesno)
 	}
+
+	gatewayList, err := gatewayClient.ListAll()
+
+	if err != nil {
+		fmt.Printf("Erorr!!\n %s", err)
+	} else {
+		fmt.Println("The result is:", gatewayList.Response)
+	}
 }
