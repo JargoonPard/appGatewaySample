@@ -14,8 +14,11 @@ func main() {
 	clientID := os.Getenv("AZURE_CLIENT_ID")
 	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+	region := os.Getenv("AZURE_REGION")
+	resourceGroup := os.Getenv("AZURE_RESOURCE_GROUP")
 
-	fmt.Printf("TenantID: %s \nclientID: %s \nsecret: %s \nsubscription: %s \n", tenantID, clientID, clientSecret, subscriptionID)
+	fmt.Printf("TenantID: %s \nclientID: %s \nsecret: %s \nsubscription: %s \nregion: %s \nresourceGroup: %s \n",
+		tenantID, clientID, clientSecret, subscriptionID, region, resourceGroup)
 
 	oauthConfig, err := azure.PublicCloud.OAuthConfigForTenant(tenantID)
 	if err != nil {
@@ -39,14 +42,28 @@ func main() {
 	gatewayClient.BaseURI = azure.PublicCloud.ResourceManagerEndpoint
 	gatewayClient.Authorizer = servicePrincipalToken
 
-	gatewayList, err := gatewayClient.ListAll()
+	gatewayList := getGatewayList(gatewayClient)
+
+	for i, k := range *gatewayList {
+		fmt.Printf("i is: %b\n", i)
+		fmt.Printf("v is: %s\n", *k.Name)
+	}
+}
+
+//GatewayClient interface has been added to support unit testing
+type GatewayClient interface {
+	ListAll() (network.ApplicationGatewayListResult, error)
+}
+
+func getGatewayList(client GatewayClient) *[]network.ApplicationGateway {
+	var value *[]network.ApplicationGateway
+	gateways, err := client.ListAll()
 
 	if err != nil {
-		fmt.Printf("Erorr!!\n %s", err)
+		fmt.Printf("Error!!\n%s", err)
 	} else {
-		for i, k := range *gatewayList.Value {
-			fmt.Printf("i is: %b\n", i)
-			fmt.Printf("v is: %s\n", *k.Name)
-		}
+		value = gateways.Value
 	}
+
+	return value
 }
