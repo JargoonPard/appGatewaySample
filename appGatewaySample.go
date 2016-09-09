@@ -39,22 +39,14 @@ func main() {
 	gatewayClient.BaseURI = azure.PublicCloud.ResourceManagerEndpoint
 	gatewayClient.Authorizer = servicePrincipalToken
 
-	result, err := gatewayClient.CheckDNSNameAvailability("westus", "demo")
-
-	if err != nil {
-		fmt.Printf("Erorr!!\n %s", err)
-	} else {
-		fmt.Println("Result:")
-		yesno := result.Available
-		fmt.Println(yesno)
-		fmt.Println(*yesno)
-	}
-
 	gatewayList, err := gatewayClient.ListAll()
 
 	if err != nil {
 		fmt.Printf("Erorr!!\n %s", err)
 	} else {
-		fmt.Println("The result is:", gatewayList.Response)
+		for i, k := range *gatewayList.Value {
+			fmt.Printf("i is: %b\n", i)
+			fmt.Printf("v is: %s\n", *k.Name)
+		}
 	}
 }
