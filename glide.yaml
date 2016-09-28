@@ -1,0 +1,10 @@
+package: github.com/jargoonpard/appGatewaySample
+import:
+- package: github.com/Azure/azure-sdk-for-go
+  version: ^4.0.0-beta
+  subpackages:
+  - arm/network
+- package: github.com/Azure/go-autorest
+  version: ^7.2.0
+  subpackages:
+  - autorest/azure
