@@ -24,7 +24,7 @@
             "host": "127.0.0.1",
             "program": "${workspaceRoot}/kubernetes",
             "env": {},
-            "args": [],
+            "args": ["TestNodes=true"],
             "showLog": true
         }
     ]

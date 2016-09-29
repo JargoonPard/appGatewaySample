@@ -16,8 +16,8 @@ import (
 
 var (
 	flags = pflag.NewFlagSet("", pflag.ExitOnError)
-	host  = flags.String("Host", "http://localhost:8001",
-		`Service proxy host`)
+
+	testNode = flags.Bool("TestNodes", false, "Indicate whether a test run of calling into the cluster to get a list of nodes should be run")
 )
 
 // podInfo contains runtime information about the pod
@@ -45,15 +45,17 @@ func main() {
 		glog.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 
-	nodes := kubeclient.Nodes()
-	var opts api.ListOptions
+	if *testNode {
+		nodes := kubeclient.Nodes()
+		var opts api.ListOptions
 
-	mynodelist, err := nodes.List(opts)
-	if err != nil {
-		glog.Fatalf("Failed to get the list of nodes: %v", err)
+		mynodelist, err := nodes.List(opts)
+		if err != nil {
+			glog.Fatalf("Failed to get the list of nodes: %v", err)
+		}
+
+		glog.Infof("Number of nodes is: %v", mynodelist.Items)
 	}
-
-	glog.Infof("Number of nodes is: %v", mynodelist.Items)
 }
 
 func handleSigterm(lbc *loadBalancerController) {

@@ -12,7 +12,10 @@ import (
 	"net/http"
 )
 
-type contextContext interface{}
+type contextContext interface {
+	Done() <-chan struct{}
+	Err() error
+}
 
 type fakeContext struct{}
 
@@ -74,4 +77,8 @@ func cloneTLSConfig(c *tls.Config) *tls.Config {
 		MaxVersion:               c.MaxVersion,
 		CurvePreferences:         c.CurvePreferences,
 	}
+}
+
+func (cc *ClientConn) Ping(ctx contextContext) error {
+	return cc.ping(ctx)
 }
