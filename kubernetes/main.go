@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
@@ -17,6 +19,13 @@ var (
 	host  = flags.String("Host", "http://localhost:8001",
 		`Service proxy host`)
 )
+
+// podInfo contains runtime information about the pod
+type podInfo struct {
+	PodName      string
+	PodNamespace string
+	NodeIP       string
+}
 
 func main() {
 	flags.AddGoFlagSet(flag.CommandLine)
@@ -45,4 +54,20 @@ func main() {
 	}
 
 	glog.Infof("Number of nodes is: %v", mynodelist.Items)
+}
+
+func handleSigterm(lbc *loadBalancerController) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGTERM)
+	<-signalChan
+	glog.Infof("Received SIGTERM, shutting down")
+
+	exitCode := 0
+	if err := lbc.Stop(); err != nil {
+		glog.Infof("Error during shutdown: %v", err)
+		exitCode = 1
+	}
+
+	glog.Infof("Exiting with %v", exitCode)
+	os.Exit(exitCode)
 }

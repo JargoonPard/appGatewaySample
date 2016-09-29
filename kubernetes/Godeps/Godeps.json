@@ -842,6 +842,11 @@
 			"Rev": "c0826a2e7e9532da91c468dceb83790491f9f8e0"
 		},
 		{
+			"ImportPath": "k8s.io/kubernetes/pkg/controller/framework",
+			"Comment": "v1.4.0-beta.9",
+			"Rev": "dfce7e639b341a13a1b6c8c1c52517949772b650"
+		},
+		{
 			"ImportPath": "k8s.io/kubernetes/pkg/conversion",
 			"Comment": "v1.5.0-alpha.0-1615-gc0826a2",
 			"Rev": "c0826a2e7e9532da91c468dceb83790491f9f8e0"
