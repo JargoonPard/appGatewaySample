@@ -21,7 +21,7 @@ type loadBalancerController struct {
 	recorder record.EventRecorder
 
 	ingressController *cache.Controller
-	ingressLister     StoreToIngressLister
+	ingressStore      cache.Store
 	ingressQueue      *taskQueue
 
 	podInfo *podInfo
@@ -65,7 +65,7 @@ func newLoadBalancerController(kubeClient *client.Client, namespace string, resy
 		},
 	}
 
-	lbc.ingressLister.Store, lbc.ingressController = cache.NewInformer(
+	lbc.ingressStore, lbc.ingressController = cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc:  ingressListFunc(lbc.client, namespace),
 			WatchFunc: ingressWatchFunc(lbc.client, namespace),
@@ -102,17 +102,13 @@ func (lbc *loadBalancerController) Stop() error {
 	return nil
 }
 
-func (lbc *loadBalancerController) removeFromIngress(ingress []interface{}) {
-
-}
-
 func (lbc *loadBalancerController) updateIngress(key string) error {
 	if !lbc.ingressController.HasSynced() {
 		time.Sleep(storeSyncPollPeriod)
 		return fmt.Errorf("deferring sync till endpoints controller has synced")
 	}
 
-	obj, ingressExists, err := lbc.ingressLister.Store.GetByKey(key)
+	obj, ingressExists, err := lbc.ingressStore.GetByKey(key)
 	if err != nil {
 		return err
 	}

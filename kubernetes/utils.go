@@ -5,14 +5,9 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/apis/extensions"
-	"k8s.io/kubernetes/pkg/client/cache"
 	"k8s.io/kubernetes/pkg/util/wait"
 	"k8s.io/kubernetes/pkg/util/workqueue"
 )
-
-type StoreToIngressLister struct {
-	cache.Store
-}
 
 type ingressAnnotations map[string]string
 
