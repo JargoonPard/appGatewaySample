@@ -22,11 +22,9 @@ type loadBalancerController struct {
 
 	ingressController *cache.Controller
 	ingressLister     StoreToIngressLister
+	ingressQueue      *taskQueue
 
 	podInfo *podInfo
-
-	syncQueue    *taskQueue
-	ingressQueue *taskQueue
 
 	stoplock sync.Mutex
 	shutdown bool
@@ -35,19 +33,25 @@ type loadBalancerController struct {
 
 var (
 	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+
+	// Frequency to poll on local stores to sync.
+	storeSyncPollPeriod = 5 * time.Second
 )
 
 func newLoadBalancerController(kubeClient *client.Client, namespace string, resyncPeriod time.Duration) (*loadBalancerController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
-	eventBroadcaster.StartRecordingToSink(kubeClient.Events(""))
+	eventBroadcaster.StartRecordingToSink(kubeClient.Events(namespace))
 
 	lbc := loadBalancerController{
 		client: kubeClient,
+		stopCh: make(chan struct{}),
 		recorder: eventBroadcaster.NewRecorder(api.EventSource{
 			Component: "azure-ingress-controller",
 		}),
 	}
+
+	lbc.ingressQueue = NewTaskQueue(lbc.updateIngress)
 
 	ingressEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -58,7 +62,6 @@ func newLoadBalancerController(kubeClient *client.Client, namespace string, resy
 			}
 			lbc.recorder.Eventf(addIngress, api.EventTypeNormal, "CREATE", fmt.Sprintf("%s/%s", addIngress.Namespace, addIngress.Name))
 			lbc.ingressQueue.enqueue(obj)
-			lbc.syncQueue.enqueue(obj)
 		},
 	}
 
@@ -92,20 +95,44 @@ func (lbc *loadBalancerController) Stop() error {
 		lbc.shutdown = true
 		close(lbc.stopCh)
 
-		ingress := lbc.ingressLister.Store.List()
-		glog.Infof("Removing IP address %v from ingress rules", lbc.podInfo.NodeIP)
-		lbc.removeFromIngress(ingress)
-
 		glog.Infof("Shutting down controller queues")
-		lbc.syncQueue.shutdown()
 		lbc.ingressQueue.shutdown()
-
-		return nil
 	}
 
-	return fmt.Errorf("Shutdown already in progress")
+	return nil
 }
 
 func (lbc *loadBalancerController) removeFromIngress(ingress []interface{}) {
 
+}
+
+func (lbc *loadBalancerController) updateIngress(key string) error {
+	if !lbc.ingressController.HasSynced() {
+		time.Sleep(storeSyncPollPeriod)
+		return fmt.Errorf("deferring sync till endpoints controller has synced")
+	}
+
+	obj, ingressExists, err := lbc.ingressLister.Store.GetByKey(key)
+	if err != nil {
+		return err
+	}
+
+	if !ingressExists {
+		// TODO: what's the correct behavior here?
+		return nil
+	}
+
+	ingress := obj.(*extensions.Ingress)
+	glog.Infof("Ingress client retrieved %v", ingress.Name)
+
+	return nil
+}
+
+func (lbc *loadBalancerController) Run() {
+	glog.Infof("Starting Azure ingress controller")
+
+	go lbc.ingressController.Run(lbc.stopCh)
+	go lbc.ingressQueue.run(time.Second, lbc.stopCh)
+	<-lbc.stopCh
+	glog.Infof("Shutting down Azure ingress controller")
 }

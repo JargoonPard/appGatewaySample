@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
@@ -16,6 +17,12 @@ import (
 
 var (
 	flags = pflag.NewFlagSet("", pflag.ExitOnError)
+
+	resyncPeriod = flags.Duration("sync-period", 30*time.Second,
+		`Relist and confirm cloud resources this often.`)
+
+	watchNamespace = flags.String("watch-namespace", api.NamespaceAll,
+		`Namespace to watch for Ingress. Default is to watch all namespaces`)
 
 	testNode = flags.Bool("TestNodes", false, "Indicate whether a test run of calling into the cluster to get a list of nodes should be run")
 )
@@ -30,6 +37,10 @@ type podInfo struct {
 func main() {
 	flags.AddGoFlagSet(flag.CommandLine)
 	flags.Parse(os.Args)
+
+	//work around to issue #17162
+	//https://github.com/kubernetes/kubernetes/issues/17162
+	flag.CommandLine.Parse([]string{})
 
 	clientConfig := kubectl_util.DefaultClientConfig(flags)
 
@@ -55,6 +66,20 @@ func main() {
 		}
 
 		glog.Infof("Number of nodes is: %v", mynodelist.Items)
+	}
+
+	lbc, err := newLoadBalancerController(kubeclient, *watchNamespace, *resyncPeriod)
+	if err != nil {
+		glog.Fatalf("%v", err)
+	}
+
+	go handleSigterm(lbc)
+
+	lbc.Run()
+
+	for {
+		glog.Infof("Handled quit, awaiting pod deletion.")
+		time.Sleep(30 * time.Second)
 	}
 }
 
