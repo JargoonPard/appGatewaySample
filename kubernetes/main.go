@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/kubernetes/contrib/ingress/controllers/gce/controller"
 	"github.com/spf13/pflag"
 
 	"k8s.io/kubernetes/pkg/api"
@@ -25,6 +28,13 @@ var (
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
 
 	testNode = flags.Bool("TestNodes", false, "Indicate whether a test run of calling into the cluster to get a list of nodes should be run")
+
+	tenantId = flags.String("tenantId", "", "Azure tenantId")
+	subscriptionId = flags.String("subscriptionId", "", "Azure subscription Id")
+	clientId = flags.String("clientId", "", "Azure client id")
+	clientSecret = flags.String("clientSecret", "", "Azure client secret key")
+	region = flags.String("region", "", "Azure region that hosts the Kubernetes cluster (e.g. westus, southcentralasia, etc.)")
+	resourceGroup = flags.String("resourceGroup", "", "Azure resource group that hosts the Kubernetes cluster")
 )
 
 // podInfo contains runtime information about the pod
@@ -73,6 +83,7 @@ func main() {
 		glog.Fatalf("%v", err)
 	}
 
+	go registerHttpHandlers(lbc)
 	go handleSigterm(lbc)
 
 	lbc.Run()
@@ -97,4 +108,17 @@ func handleSigterm(lbc *loadBalancerController) {
 
 	glog.Infof("Exiting with %v", exitCode)
 	os.Exit(exitCode)
+}
+
+func registerHTTPHandlers(lbc *controller.LoadBalancerController) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		//TODO: add in determination of what defines healthy
+		w.WriteHeader(200)
+		w.Write([]byte("ok"))
+	})
+	http.HandleFunc("/delete-all-and-quit", func(w http.ResponseWriter, r *http.Request) {
+		lbc.Stop(true)
+	})
+
+	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *healthzPort), nil))
 }
