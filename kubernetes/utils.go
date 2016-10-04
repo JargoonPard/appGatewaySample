@@ -3,7 +3,9 @@ package main
 import (
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/glog"
+
 	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/util/wait"
 	"k8s.io/kubernetes/pkg/util/workqueue"
@@ -58,7 +60,7 @@ func isAzureIngress(ingress *extensions.Ingress) bool {
 
 // NewTaskQueue creates a new task queue with the given sync function.
 // The sync function is called for every element inserted into the queue.
-func NewTaskQueue(syncFn func(string) error) *taskQueue {
+func newTaskQueue(syncFn func(string) error) *taskQueue {
 	return &taskQueue{
 		queue:      workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		sync:       syncFn,
@@ -88,4 +90,24 @@ func (t *taskQueue) worker() {
 
 		t.queue.Done(key)
 	}
+}
+
+func newServicePrincipalToken(tenantID, clientID, clientSecret string) (*azure.ServicePrincipalToken, error) {
+	oauthConfig, err := azure.PublicCloud.OAuthConfigForTenant(tenantID)
+	if err != nil {
+		glog.Errorf("Error creating oauthConfig: %v", err)
+		return nil, err
+	}
+
+	servicePrincipalToken, err := azure.NewServicePrincipalToken(
+		*oauthConfig,
+		clientID,
+		clientSecret,
+		azure.PublicCloud.ServiceManagementEndpoint)
+	if err != nil {
+		glog.Errorf("Error creating servicePrincipalToken: %v", err)
+		return nil, err
+	}
+
+	return servicePrincipalToken, err
 }

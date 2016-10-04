@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/jargoonpard/appGatewaySample/kubernetes/azurecontroller"
 	"github.com/spf13/pflag"
 
 	"k8s.io/kubernetes/pkg/api"
@@ -24,8 +25,6 @@ var (
 
 	watchNamespace = flags.String("watch-namespace", api.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
-
-	testNode = flags.Bool("TestNodes", false, "Indicate whether a test run of calling into the cluster to get a list of nodes should be run")
 
 	tenantID       = flags.String("tenantID", "", "Azure tenantId")
 	subscriptionID = flags.String("subscriptionID", "", "Azure subscription Id")
@@ -45,11 +44,44 @@ type podInfo struct {
 func main() {
 	flags.AddGoFlagSet(flag.CommandLine)
 	flags.Parse(os.Args)
-
 	//work around to issue #17162
 	//https://github.com/kubernetes/kubernetes/issues/17162
 	flag.CommandLine.Parse([]string{})
 
+	kubeClient, err := newKubeClient(flags)
+	if err != nil {
+		glog.Fatalf("Failed to create kubeclient %v", err)
+	}
+
+	servicePrincipalToken, err := newServicePrincipalToken(*tenantID, *clientID, *clientSecret)
+	if err != nil {
+		glog.Fatalf("Failed to create Azure servicePrincipalToken %v", err)
+	}
+
+	creds := azurecontroller.AzureCredentialInfo{
+		ResourceGroupName:     *resourceGroup,
+		Region:                *region,
+		SubscriptionID:        *subscriptionID,
+		ServicePrincipalToken: servicePrincipalToken,
+	}
+
+	lbc, err := newLoadBalancerController(kubeClient, *watchNamespace, *resyncPeriod, creds)
+	if err != nil {
+		glog.Fatalf("Failed to create loadBalancerController: %v", err)
+	}
+
+	go registerHTTPHandlers(lbc)
+	go handleSigterm(lbc)
+
+	lbc.Run()
+
+	for {
+		glog.Infof("Handled quit, awaiting pod deletion.")
+		time.Sleep(30 * time.Second)
+	}
+}
+
+func newKubeClient(flags *pflag.FlagSet) (*unversioned.Client, error) {
 	clientConfig := kubectl_util.DefaultClientConfig(flags)
 
 	config, err := clientConfig.ClientConfig()
@@ -64,32 +96,7 @@ func main() {
 		glog.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 
-	if *testNode {
-		nodes := kubeclient.Nodes()
-		var opts api.ListOptions
-
-		mynodelist, err := nodes.List(opts)
-		if err != nil {
-			glog.Fatalf("Failed to get the list of nodes: %v", err)
-		}
-
-		glog.Infof("Number of nodes is: %v", mynodelist.Items)
-	}
-
-	lbc, err := newLoadBalancerController(kubeclient, *watchNamespace, *resyncPeriod)
-	if err != nil {
-		glog.Fatalf("%v", err)
-	}
-
-	go registerHTTPHandlers(lbc)
-	go handleSigterm(lbc)
-
-	lbc.Run()
-
-	for {
-		glog.Infof("Handled quit, awaiting pod deletion.")
-		time.Sleep(30 * time.Second)
-	}
+	return kubeclient, err
 }
 
 func handleSigterm(lbc *loadBalancerController) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/jargoonpard/appGatewaySample/kubernetes/azurecontroller"
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/extensions"
@@ -19,6 +20,8 @@ import (
 type loadBalancerController struct {
 	client   *client.Client
 	recorder record.EventRecorder
+
+	azureGWClient *azurecontroller.AzureGatewayClientController
 
 	ingressController *cache.Controller
 	ingressStore      cache.Store
@@ -38,20 +41,26 @@ var (
 	storeSyncPollPeriod = 5 * time.Second
 )
 
-func newLoadBalancerController(kubeClient *client.Client, namespace string, resyncPeriod time.Duration) (*loadBalancerController, error) {
+func newLoadBalancerController(
+	kubeClient *client.Client,
+	namespace string,
+	resyncPeriod time.Duration,
+	creds azurecontroller.AzureCredentialInfo) (*loadBalancerController, error) {
+
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(kubeClient.Events(namespace))
 
 	lbc := loadBalancerController{
-		client: kubeClient,
-		stopCh: make(chan struct{}),
+		client:        kubeClient,
+		azureGWClient: azurecontroller.NewAzureGatewayClientController(creds),
+		stopCh:        make(chan struct{}),
 		recorder: eventBroadcaster.NewRecorder(api.EventSource{
 			Component: "azure-ingress-controller",
 		}),
 	}
 
-	lbc.ingressQueue = NewTaskQueue(lbc.updateIngress)
+	lbc.ingressQueue = newTaskQueue(lbc.updateIngress)
 
 	ingressEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -120,6 +129,9 @@ func (lbc *loadBalancerController) updateIngress(key string) error {
 
 	ingress := obj.(*extensions.Ingress)
 	glog.Infof("Ingress client retrieved %v", ingress.Name)
+
+	//synchronize with Azure
+	lbc.azureGWClient.SyncApplicationGateway(ingress)
 
 	return nil
 }

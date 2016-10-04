@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/jargoonpard/appgatewaysample/kubernetes",
+	"ImportPath": "github.com/jargoonpard/appGatewaySample/kubernetes",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
 	"Packages": [
@@ -20,6 +20,36 @@
 			"ImportPath": "cloud.google.com/go/internal",
 			"Comment": "v0.1.0-181-gdebdc0c",
 			"Rev": "debdc0ca0113dd546ebebeb2000c9d938059f41d"
+		},
+		{
+			"ImportPath": "github.com/Azure/azure-sdk-for-go/arm/network",
+			"Comment": "v4.0.0-beta-10-g5dbdd3e",
+			"Rev": "5dbdd3e002c0c232938bf953a5e7fa9a58ee749e"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-autorest/autorest",
+			"Comment": "v7.2.0-4-g928711b",
+			"Rev": "928711bfb9b6bc052ea85a8f4e1d8f4e1bf55f95"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-autorest/autorest/azure",
+			"Comment": "v7.2.0-4-g928711b",
+			"Rev": "928711bfb9b6bc052ea85a8f4e1d8f4e1bf55f95"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-autorest/autorest/date",
+			"Comment": "v7.2.0-4-g928711b",
+			"Rev": "928711bfb9b6bc052ea85a8f4e1d8f4e1bf55f95"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-autorest/autorest/to",
+			"Comment": "v7.2.0-4-g928711b",
+			"Rev": "928711bfb9b6bc052ea85a8f4e1d8f4e1bf55f95"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-autorest/autorest/validation",
+			"Comment": "v7.2.0-4-g928711b",
+			"Rev": "928711bfb9b6bc052ea85a8f4e1d8f4e1bf55f95"
 		},
 		{
 			"ImportPath": "github.com/PuerkitoBio/purell",
@@ -82,6 +112,11 @@
 			"ImportPath": "github.com/davecgh/go-spew/spew",
 			"Comment": "v1.0.0-3-g6d21280",
 			"Rev": "6d212800a42e8ab5c146b8ace3490ee17e5225f9"
+		},
+		{
+			"ImportPath": "github.com/dgrijalva/jwt-go",
+			"Comment": "v3.0.0-8-g24c63f5",
+			"Rev": "24c63f56522a87ec5339cc3567883f1039378fdb"
 		},
 		{
 			"ImportPath": "github.com/docker/distribution/digest",
