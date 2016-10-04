@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes/contrib/ingress/controllers/gce/controller"
 	"github.com/spf13/pflag"
 
 	"k8s.io/kubernetes/pkg/api"
@@ -29,12 +27,12 @@ var (
 
 	testNode = flags.Bool("TestNodes", false, "Indicate whether a test run of calling into the cluster to get a list of nodes should be run")
 
-	tenantId = flags.String("tenantId", "", "Azure tenantId")
-	subscriptionId = flags.String("subscriptionId", "", "Azure subscription Id")
-	clientId = flags.String("clientId", "", "Azure client id")
-	clientSecret = flags.String("clientSecret", "", "Azure client secret key")
-	region = flags.String("region", "", "Azure region that hosts the Kubernetes cluster (e.g. westus, southcentralasia, etc.)")
-	resourceGroup = flags.String("resourceGroup", "", "Azure resource group that hosts the Kubernetes cluster")
+	tenantID       = flags.String("tenantID", "", "Azure tenantId")
+	subscriptionID = flags.String("subscriptionID", "", "Azure subscription Id")
+	clientID       = flags.String("clientID", "", "Azure client id")
+	clientSecret   = flags.String("clientSecret", "", "Azure client secret key")
+	region         = flags.String("region", "", "Azure region that hosts the Kubernetes cluster (e.g. westus, southcentralasia, etc.)")
+	resourceGroup  = flags.String("resourceGroup", "", "Azure resource group that hosts the Kubernetes cluster")
 )
 
 // podInfo contains runtime information about the pod
@@ -83,7 +81,7 @@ func main() {
 		glog.Fatalf("%v", err)
 	}
 
-	go registerHttpHandlers(lbc)
+	go registerHTTPHandlers(lbc)
 	go handleSigterm(lbc)
 
 	lbc.Run()
@@ -110,15 +108,15 @@ func handleSigterm(lbc *loadBalancerController) {
 	os.Exit(exitCode)
 }
 
-func registerHTTPHandlers(lbc *controller.LoadBalancerController) {
+func registerHTTPHandlers(lbc *loadBalancerController) {
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		//TODO: add in determination of what defines healthy
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
 	http.HandleFunc("/delete-all-and-quit", func(w http.ResponseWriter, r *http.Request) {
-		lbc.Stop(true)
+		lbc.Stop()
 	})
 
-	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *healthzPort), nil))
+	//glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *healthzPort), nil))
 }
