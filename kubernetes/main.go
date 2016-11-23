@@ -53,6 +53,8 @@ func main() {
 		glog.Fatalf("Failed to create kubeclient %v", err)
 	}
 
+	getNodeIPAddresses(kubeClient)
+
 	servicePrincipalToken, err := newServicePrincipalToken(*tenantID, *clientID, *clientSecret)
 	if err != nil {
 		glog.Fatalf("Failed to create Azure servicePrincipalToken %v", err)
@@ -126,4 +128,18 @@ func registerHTTPHandlers(lbc *loadBalancerController) {
 	})
 
 	//glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *healthzPort), nil))
+}
+
+func getNodeIPAddresses(kubeClient *unversioned.Client) []string {
+	nodelist, err := kubeClient.Nodes().List(api.ListOptions{})
+
+	if err != nil {
+		glog.Errorf("Error getting nodelist %v", err)
+	} else {
+		for index := 0; index < len(nodelist.Items); index++ {
+			glog.Info(nodelist.Items[index])
+		}
+	}
+
+	return nil
 }
